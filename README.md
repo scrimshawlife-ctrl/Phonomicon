@@ -58,8 +58,12 @@ phonomicon/
 │   ├── provenance/         # Mint records
 │   ├── ux/                 # UX sessions
 │   └── metrics/            # AAL metrics
-└── config/                 # Configuration
-    └── settings.py         # Environment-based settings
+├── config/                 # Configuration
+│   └── settings.py         # Environment-based settings
+└── phonomicon_overlay/     # AAL-Core integration overlay
+    ├── server.py           # HTTP server with capability routing
+    ├── provenance.py       # Deterministic provenance tracking
+    └── README.md           # Overlay documentation
 ```
 
 ## Installation
@@ -197,6 +201,81 @@ curl -X POST http://localhost:8000/mint-asset \
     "creator": "user_001"
   }'
 ```
+
+### Overlay Service (AAL-Core Integration)
+
+Phonomicon includes an **overlay service** that exposes capabilities through a stable HTTP interface compatible with Abraxas/AAL-core.
+
+#### Starting the Overlay
+
+```bash
+# Start on default host/port (127.0.0.1:8794)
+python -m phonomicon_overlay
+
+# Custom host/port
+python -m phonomicon_overlay --host 0.0.0.0 --port 9000
+```
+
+#### Overlay Endpoints
+
+**GET /health** - Health check
+**POST /run** - Execute capability with provenance tracking
+
+#### Available Capabilities
+
+- `phonomicon.ping` - Test connectivity and binding status (always available)
+- `phonomicon.echo` - Echo input for testing (always available)
+- `phonomicon.mint` - Mint audio to NFT (requires wiring)
+- `phonomicon.render` - Render visual from audio (requires wiring)
+- `phonomicon.verify` - Verify manifest provenance (requires wiring)
+
+#### Example Requests
+
+Test connectivity:
+```bash
+curl -X POST http://localhost:8794/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "capability": "phonomicon.ping",
+    "input": {}
+  }'
+```
+
+Check what needs wiring:
+```bash
+curl -X POST http://localhost:8794/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "capability": "phonomicon.mint",
+    "input": {
+      "audio_id": "aud_001",
+      "audio_hash": "abc123",
+      "title": "Test",
+      "description": "Test",
+      "creator": "test"
+    }
+  }'
+```
+
+Returns structured error with binding instructions.
+
+#### Wiring Real Functions
+
+The overlay is **intentionally not wired** to prevent silent API guessing. To wire capabilities:
+
+1. Edit `phonomicon_overlay/server.py`
+2. Import real functions in `_try_import_phonomicon_core()`
+3. Adapt payloads in capability handlers
+
+See `phonomicon_overlay/README.md` for detailed wiring instructions.
+
+#### Provenance Tracking
+
+Every `/run` request includes deterministic provenance:
+- **run_id**: SHA256 hash of operation parameters
+- **ts_utc**: UTC timestamp
+- **payload_hash**: SHA256 of input
+- **env**: Python version, platform, git HEAD
 
 ### Corpus Management
 
