@@ -1,0 +1,6 @@
+{
+  "name": "phonomicon",
+  "enabled": true,
+  "py_exports": ["phonomicon.exports"],
+  "service_url": "http://127.0.0.1:8200"
+}
